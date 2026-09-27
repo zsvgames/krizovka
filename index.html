@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Křížovka: Komunismus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Literata:opsz,wght@18..36,400;18..36,500;18..36,600;18..36,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15121c;
+    --panel:#1f1a29;
+    --panel2:#241f30;
+    --accent:#b0272e;
+    --accent2:#8a1f24;
+    --gold:#c9a04a;
+    --text:#eae4d8;
+    --muted:#a89bc0;
+    --cell:#f4efe4;
+    --cell-border:#0c0a10;
+    --cell-active:#e8c76b;
+    --cell-word:#3c3350;
+    --ok:#4e9a51;
+    --bad:#b0272e;
+    --font-display:'Oswald', 'Arial Narrow', sans-serif;
+    --font-body:'Literata', Georgia, 'Times New Roman', serif;
+  }
+  *{box-sizing:border-box;}
+  html{ -webkit-text-size-adjust:100%; scroll-padding-top:env(safe-area-inset-top,0px); }
+  body{
+    margin:0;
+    background: radial-gradient(circle at 20% 0%, #241f30 0%, #15121c 55%, #0e0c13 100%);
+    color:var(--text);
+    font-family: var(--font-body);
+    min-height:100vh;
+    padding:calc(14px + env(safe-area-inset-top,0px)) 10px calc(60px + env(safe-area-inset-bottom,0px));
+  }
+  h1{
+    text-align:center;
+    font-family: var(--font-display);
+    font-weight:700;
+    font-size:1.6rem;
+    letter-spacing:1.5px;
+    color:var(--gold);
+    text-transform:uppercase;
+    margin:6px 0 8px;
+    text-shadow:0 0 14px rgba(201,160,74,.35);
+  }
+  h1::after{
+    content:"";
+    display:block;
+    width:56px;
+    height:3px;
+    margin:8px auto 0;
+    background:var(--accent);
+    border-radius:2px;
+  }
+  .subtitle{
+    text-align:center;
+    color:var(--muted);
+    font-size:.9rem;
+    margin-bottom:16px;
+    letter-spacing:.3px;
+  }
+
+  /* sticky "current clue" bar — always visible while filling, key for mobile */
+  .clue-bar{
+    position:sticky;
+    top:env(safe-area-inset-top,0px);
+    z-index:20;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    height:64px;
+    background:linear-gradient(135deg,#2b2138 0%,#1c1626 60%,#231a2e 100%);
+    border:1px solid rgba(201,160,74,.3);
+    border-top:2px solid var(--gold);
+    border-radius:12px;
+    padding:8px 12px;
+    max-width:1100px;
+    margin:0 auto 16px;
+    box-shadow:0 10px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  #clueBarSentinel{ height:0; }
+  .clue-bar .nav-btn{
+    flex:0 0 auto;
+    width:42px; height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    min-height:0;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#564870,#2c2438 70%);
+    color:var(--gold);
+    border:2px solid rgba(201,160,74,.55);
+    cursor:pointer;
+    box-shadow:0 3px 8px rgba(0,0,0,.45), inset 0 1px 1px rgba(255,255,255,.08);
+    transition:transform .12s, background .15s, border-color .15s, box-shadow .15s;
+    touch-action:manipulation;
+  }
+  .clue-bar .nav-btn svg{ display:block; }
+  .clue-bar .nav-btn:disabled{ opacity:.35; box-shadow:none; }
+  /* Šipky Předchozí/Další otázka patří jen do mobilního rozvržení — na
+     desktopu by jen zabíraly místo v pruhu s otázkou. */
+  .clue-bar .nav-btn{ display:none; }
+  .clue-bar .nav-btn:hover{
+    border-color:var(--gold);
+    box-shadow:0 3px 10px rgba(0,0,0,.5), 0 0 0 3px rgba(201,160,74,.15);
+  }
+  .clue-bar .nav-btn:active{
+    background:radial-gradient(circle at 35% 30%,#c8394a,var(--accent2) 70%);
+    color:#fff;
+    border-color:var(--gold);
+    transform:scale(.9);
+  }
+  @media (prefers-reduced-motion: reduce){ .clue-bar .nav-btn{ transition:none; } .clue-bar .nav-btn:active{ transform:none; } }
+  .clue-bar .clue-text{
+    flex:1 1 auto;
+    min-width:0;
+    height:100%;
+    display:flex;
+    align-items:center;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    font-family: var(--font-body);
+    font-size:.95rem;
+    line-height:1.3;
+  }
+  /* políčka aktuálního slova, zobrazená pod otázkou pro snadnější doplňování */
+  .clue-fields{
+    position:relative;
+    z-index:25;
+    display:flex;
+    gap:6px;
+    justify-content:center;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:10px 4px 4px;
+    max-width:1100px;
+    margin:0 auto 16px;
+  }
+  .clue-fields:empty{ display:none; margin:0; padding:0; }
+  .clue-fields .cf-box{
+    flex:0 0 auto;
+    width:36px;
+    height:36px;
+    text-align:center;
+    text-transform:uppercase;
+    font-family:var(--font-display);
+    font-size:1.05rem;
+    font-weight:600;
+    color:#15121c;
+    background:var(--cell);
+    border:2px solid rgba(201,160,74,.55);
+    border-radius:6px;
+    outline:none;
+    caret-color:var(--accent);
+    padding:0;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .clue-fields .cf-box:focus{
+    border-color:var(--gold);
+    box-shadow:0 0 0 3px rgba(201,160,74,.3);
+  }
+  .clue-fields .cf-box.correct{
+    border-color:var(--ok);
+    box-shadow:0 0 0 2px rgba(78,154,81,.35);
+  }
+  .clue-fields .cf-box.incorrect{
+    border-color:var(--bad);
+    box-shadow:0 0 0 2px rgba(176,39,46,.3);
+  }
+  @media (max-width:380px){
+    .clue-fields .cf-box{ width:32px; height:32px; font-size:1rem; }
+  }
+  .clue-bar .clue-text b{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:24px;
+    height:24px;
+    padding:0 6px;
+    margin-right:9px;
+    background:var(--gold);
+    color:#2a1d10;
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:.78rem;
+    border-radius:7px;
+    box-shadow:0 2px 4px rgba(0,0,0,.3);
+  }
+
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    width:100%;
+  }
+  .board-card{
+    position:relative;
+    background:var(--panel);
+    border:none;
+    border-radius:0;
+    padding:0;
+    box-shadow:none;
+    overflow:visible;
+    /* bleed past the page's own side padding so the board touches the real screen edges */
+    width:calc(100% + 20px);
+    margin:0 -10px;
+    max-height:78vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  #grid{
+    display:grid;
+    gap:2px;
+    background:var(--cell-border);
+    border:2px solid var(--cell-border);
+    width:max-content;
+    margin:0 auto;
+    touch-action:manipulation;
+  }
+  .cell{
+    position:relative;
+    width:var(--cell-size, 30px);
+    height:var(--cell-size, 30px);
+    background:var(--cell);
+    transition:transform .15s ease;
+    transform-origin:center;
+  }
+  .cell.block{
+    background:transparent;
+    visibility:hidden;
+  }
+  .cell input{
+    width:100%;
+    height:100%;
+    border:none;
+    background:transparent;
+    text-align:center;
+    font-family: var(--font-display);
+    font-size:16px; /* >=16px keeps iOS/Android from auto-zooming on focus */
+    font-weight:600;
+    color:#1c1620;
+    text-transform:uppercase;
+    outline:none;
+    caret-color:transparent;
+    padding:0;
+    transition:background .15s ease;
+  }
+  .cell.inword{ transform:scale(1.06); z-index:2; }
+  .cell.active{ transform:scale(1.16); z-index:3; }
+  .cell.active input, .cell.inword input{ box-shadow:0 2px 8px rgba(0,0,0,.4); border-radius:2px; }
+  .cell.active input{ background:var(--cell-active); }
+  .cell.inword input{ background:#f0d99a; }
+  .cell.correct input{ background:#bfe3c0; color:#245126; }
+  .cell.incorrect input{ background:#f2b8ba; color:#7a1a1a; }
+  .num{
+    position:absolute;
+    top:1px; left:2px;
+    font-size:10px;
+    font-weight:700;
+    color:#3a2f18;
+    font-family: var(--font-display);
+    pointer-events:none;
+  }
+  .controls{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin:22px auto 0;
+    max-width:1100px;
+    flex-wrap:wrap;
+  }
+  button{
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:12px 22px;
+    min-height:46px;
+    border-radius:7px;
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:.92rem;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    cursor:pointer;
+    box-shadow:0 4px 10px rgba(176,39,46,.35);
+    transition:transform .1s, background .15s;
+    touch-action:manipulation;
+  }
+  button:hover{ background:var(--accent2); transform:translateY(-1px); }
+  button:focus-visible, input:focus-visible{
+    outline:2px solid var(--gold);
+    outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    button{ transition:none; }
+    button:hover{ transform:none; }
+  }
+  button.secondary{
+    background:#3a3148;
+    box-shadow:none;
+  }
+  button.secondary:hover{ background:#463a5a; }
+  #status{
+    text-align:center;
+    margin-top:14px;
+    font-size:.92rem;
+    min-height:1.2em;
+    color:var(--muted);
+  }
+  #status.win{
+    color:var(--gold);
+    font-size:1.15rem;
+    font-weight:bold;
+    text-shadow:0 0 10px rgba(201,160,74,.5);
+  }
+  @media (max-width:720px){
+    :root{ --cell-size:32px; }
+    h1{ font-size:1.3rem; letter-spacing:1px; }
+    .subtitle{ font-size:.82rem; }
+    .wrap{ gap:14px; }
+    .controls{ gap:8px; }
+    .controls button{ flex:1 1 auto; min-width:0; padding:12px 8px; font-size:.82rem; }
+    .clue-bar{ padding:6px 10px; }
+    .clue-bar .clue-text{ font-size:.86rem; }
+  }
+  @media (max-width:380px){
+    :root{ --cell-size:28px; }
+  }
+
+  /* small info button that opens the text reader, sitting on the right of the clue bar */
+  .info-btn{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:none;
+    border:none;
+    padding:0;
+    color:var(--gold);
+    font-family:var(--font-display);
+    font-size:.72rem;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+  .info-btn-icon{ width:46px; height:46px; line-height:0; border-radius:4px; overflow:hidden; flex:0 0 auto; }
+  .info-btn-icon img, .info-btn-icon canvas{ display:block; width:46px; height:46px; }
+  .info-btn:hover .info-btn-icon{ box-shadow:0 0 0 2px var(--gold); }
+  @media (max-width:720px){
+    .info-btn-label{ display:none; } /* icon-only on small screens to stay out of the way */
+  }
+
+  .modal-footer-qr{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:0 18px 14px;
+    color:var(--muted);
+    font-size:.78rem;
+    line-height:1.35;
+  }
+  .modal-footer-qr #qrcode{ width:64px; height:64px; flex:0 0 auto; line-height:0; border-radius:6px; overflow:hidden; }
+  .modal-footer-qr #qrcode img, .modal-footer-qr #qrcode canvas{ display:block; width:64px; height:64px; }
+
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    z-index:50;
+    background:rgba(10,8,14,.78);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+  }
+  .modal-overlay.hidden{ display:none; }
+  .modal-box{
+    background:var(--panel);
+    border:1px solid #3a3148;
+    border-radius:12px;
+    max-width:640px;
+    width:100%;
+    max-height:min(88vh, calc(100vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px));
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 14px 40px rgba(0,0,0,.6);
+  }
+  .modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:14px 16px 10px;
+    border-bottom:1px solid #3a3148;
+  }
+  .modal-header h2{
+    margin:0;
+    font-family: var(--font-display);
+    font-weight:600;
+    font-size:1.05rem;
+    color:var(--gold);
+    letter-spacing:.4px;
+    line-height:1.3;
+  }
+  .modal-header button{
+    background:#3a3148;
+    min-height:0;
+    padding:8px 13px;
+    font-size:.9rem;
+    box-shadow:none;
+  }
+  .modal-header button:hover{ background:var(--accent2); }
+  .modal-body{
+    padding:16px 18px 18px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    font-family: var(--font-body);
+    font-size:1.02rem;
+    line-height:1.65;
+    color:var(--text);
+  }
+  .modal-body p{ margin:0 0 14px; }
+  .modal-body p.quote{
+    font-style:italic;
+    color:var(--gold);
+    border-left:3px solid var(--gold);
+    padding-left:12px;
+    margin:16px 0;
+  }
+  .modal-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 16px 14px;
+    border-top:1px solid #3a3148;
+  }
+  .modal-nav button{ padding:8px 14px; font-size:.8rem; }
+  .modal-nav button:disabled{ opacity:.4; cursor:default; box-shadow:none; }
+  #textPageIndicator{
+    font-size:.78rem;
+    color:var(--muted);
+    letter-spacing:.5px;
+  }
+
+
+  /* ==========================================================================
+     MOBILNÍ ROZVRŽENÍ (na výšku, do 768px)
+     Mřížka má vyhrazený horní pás displeje, všechno ostatní (otázka, políčka
+     pro zápis textu i tlačítka Zkontrolovat/Vymazat) tvoří fixní spodní panel,
+     který drží nad softwarovou klávesnicí. Desktopové rozvržení se nemění.
+     ========================================================================== */
+  #bottomPanel{ display:none; } /* na desktopu je panel prázdný a skrytý */
+
+  @media (max-width:768px) and (orientation:portrait){
+    html{ height:100%; overflow:hidden; }
+    body{
+      height:100%;
+      min-height:0;
+      overflow:hidden;
+      padding:calc(6px + env(safe-area-inset-top,0px)) 6px 0;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* --- horní pás: jen mřížka křížovky --- */
+    .board-area{
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      overflow:auto;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+      /* místo pod mřížkou zabírá spodní panel + případná otevřená klávesnice */
+      padding-bottom:calc(var(--bottom-panel-h, 0px) + var(--kb-offset, 0px) + 6px);
+    }
+    .board-area > .wrap{ margin:auto; }              /* vycentruje, ale nechá doscrollovat */
+    .board-card{ width:100%; margin:0; max-height:none; }
+
+    /* --- fixní spodní panel nad klávesnicí --- */
+    #bottomPanel{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:var(--kb-offset, 0px);
+      z-index:40;
+      padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));
+      background:linear-gradient(180deg,#2b2138 0%,#1b1526 100%);
+      border-top:2px solid var(--gold);
+      box-shadow:0 -10px 26px rgba(0,0,0,.6);
+    }
+    #bottomPanel > .clue-bar{
+      position:static;
+      top:auto;
+      width:100%;
+      max-width:none;
+      height:auto;
+      gap:6px;
+      margin:0;
+      padding:3px 5px;
+      border-top-width:1px;
+      border-radius:9px;
+      box-shadow:none;
+    }
+    /* malé šipky na přepínání otázek palcem */
+    #bottomPanel > .clue-bar .nav-btn{
+      display:flex;
+      flex:0 0 auto;
+      width:34px;
+      height:34px;
+      min-width:0;
+      min-height:0;
+      padding:0;
+      border-width:1px;
+    }
+    #bottomPanel > .clue-bar .clue-text{
+      height:auto;
+      max-height:none;      /* dlouhá otázka se nesmí ořezávat – panel raději povyroste */
+      overflow:visible;
+      font-size:.84rem;
+      line-height:1.25;
+    }
+    #bottomPanel > .clue-bar .clue-text b{
+      min-width:20px;
+      height:20px;
+      padding:0 5px;
+      margin-right:6px;
+      font-size:.72rem;
+    }
+    /* QR kód v pravém horním rohu je na mobilu úplně skrytý — zůstává
+       jen zjednodušený textový odkaz „Text k tématu“ */
+    #bottomPanel > .clue-bar .info-btn{ box-shadow:none; gap:0; padding:0; }
+    #bottomPanel > .clue-bar .info-btn-icon{ display:none; }
+    #bottomPanel > .clue-bar .info-btn-label{
+      display:inline;
+      max-width:74px;
+      color:var(--gold);
+      font-size:.62rem;
+      line-height:1.15;
+      text-align:right;
+      text-decoration:underline;
+      text-underline-offset:2px;
+    }
+    #bottomPanel > .clue-fields{
+      width:100%;
+      max-width:none;
+      margin:0;
+      padding:2px 0;
+      gap:4px;
+      justify-content:center;
+    }
+    #bottomPanel > .clue-fields .cf-box{ width:32px; height:32px; font-size:1rem; }
+    #bottomPanel > .controls{
+      width:100%;
+      max-width:none;
+      margin:0;
+      gap:6px;
+      flex-wrap:nowrap;   /* Zkontrolovat + Vymazat vedle sebe, ať nezabírají výšku */
+    }
+    #bottomPanel > .controls button{
+      flex:1 1 0;
+      min-width:0;
+      min-height:38px;
+      padding:8px 6px;
+      font-size:.76rem;
+      letter-spacing:.5px;
+    }
+    #bottomPanel > #status{
+      margin:0;
+      min-height:0;
+      font-size:.76rem;
+      line-height:1.25;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="clueBarSentinel"></div>
+<div class="clue-bar" id="clueBar">
+  <button class="nav-btn" id="cluePrevBtn" type="button" title="Předchozí otázka" aria-label="Předchozí otázka">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <div class="clue-text" id="clueBarText">Vyber políčko…</div>
+  <button class="nav-btn" id="clueNextBtn" type="button" title="Další otázka" aria-label="Další otázka">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="info-btn" id="qrCorner" title="Text k tématu" aria-label="Otevřít text k tématu">
+    <span class="info-btn-icon" id="qrCornerMini" aria-hidden="true"></span>
+    <span class="info-btn-label">Text k tématu</span>
+  </button>
+</div>
+<div class="clue-fields" id="clueFields"></div>
+
+<!-- horní pás: na mobilu (portrait) sem patří jen mřížka křížovky -->
+<div class="board-area" id="boardArea">
+  <div class="wrap">
+    <div class="board-card">
+      <div id="grid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button id="checkBtn">Zkontrolovat</button>
+  <button id="clearBtn" class="secondary">Vymazat</button>
+</div>
+<div id="status"></div>
+
+<!-- spodní panel: na mobilu (portrait) do něj JS přesune otázku s políčky
+     i tlačítka, aby držela u palce nad softwarovou klávesnicí -->
+<div class="bottom-panel" id="bottomPanel"></div>
+
+<div class="modal-overlay hidden" id="textModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="textPageTitle"></h2>
+      <button id="closeTextModal" aria-label="Zavřít">✕</button>
+    </div>
+    <div class="modal-body" id="textPageBody"></div>
+    <div class="modal-footer-qr">
+      <div id="qrcode"></div>
+      <span>Odkaz na tento text (pro naskenování z jiného zařízení)</span>
+    </div>
+    <div class="modal-nav">
+      <button id="textPrevBtn" class="secondary">‹ Předchozí</button>
+      <span id="textPageIndicator"></span>
+      <button id="textNextBtn" class="secondary">Další ›</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const PUZZLE = {
+ "rows": 16,
+ "cols": 22,
+ "cells": {"8,12":"K","8,13":"O","8,14":"M","8,15":"U","8,16":"N","8,17":"I","8,18":"S","8,19":"M","8,20":"U","8,21":"S","1,2":"O","2,2":"S","3,2":"T","4,2":"R","5,2":"A","6,2":"V","7,2":"A","5,16":"S","5,17":"T","5,18":"Á","5,19":"T","11,6":"M","11,7":"A","11,8":"N","11,9":"I","11,10":"F","11,11":"E","11,12":"S","11,13":"T","9,21":"V","10,21":"O","11,21":"B","12,21":"O","13,21":"D","14,21":"A","9,7":"D","10,7":"V","12,7":"C","13,7":"Á","14,7":"T","15,7":"É","2,4":"D","3,4":"E","4,4":"V","5,4":"A","6,4":"T","7,4":"E","8,4":"N","9,4":"Á","10,4":"C","11,4":"T","12,4":"É","0,17":"P","1,17":"R","2,17":"O","3,17":"L","4,17":"E","6,17":"Á","7,17":"Ř","1,15":"M","1,16":"A","1,18":"X","14,5":"M","14,6":"O","14,8":"I","14,9":"V","14,10":"A","14,11":"C","14,12":"E","9,2":"Z","9,3":"N","9,5":"R","9,6":"O","9,8":"N","9,9":"Ě","9,10":"N","9,11":"Í","9,16":"A","10,16":"D","11,16":"Ě","12,16":"J","13,16":"E","7,13":"B","9,13":"H","10,13":"A","12,13":"Í","13,15":"K","13,17":"Č","13,18":"U","13,19":"P","7,0":"D","7,1":"V","7,3":"C","7,5":"T","7,6":"T","7,7":"Ř","7,8":"I","8,0":"Ě","9,0":"L","10,0":"N","11,0":"Í","12,0":"C","13,0":"I"},
+ "numbers": {"0,17":1,"1,2":2,"1,15":3,"2,4":4,"5,16":5,"7,0":6,"7,13":7,"8,12":8,"8,16":9,"8,21":10,"9,2":11,"9,7":12,"11,6":13,"13,15":14,"14,5":15},
+ "across": [
+  {"num":3,"word":"MARX","clue":"Jeden z autorů Komunistického manifestu","row":1,"col":15,"len":4},
+  {"num":5,"word":"STÁT","clue":"Kdo podle textu vlastnil všechno, když se zrušilo soukromé vlastnictví?","row":5,"col":16,"len":4},
+  {"num":6,"word":"DVACETTŘI","clue":"Počet stran původního Komunistického manifestu","row":7,"col":0,"len":9},
+  {"num":8,"word":"KOMUNISMUS","clue":"Extrémní směr socialismu","row":8,"col":12,"len":10},
+  {"num":11,"word":"ZNÁRODNĚNÍ","clue":"Odborný název pro převod půdy, továren a bank do vlastnictví státu","row":9,"col":2,"len":10},
+  {"num":13,"word":"MANIFEST","clue":"Dokument z roku 1848, který sepsali Marx a Engels","row":11,"col":6,"len":8},
+  {"num":14,"word":"KEČUP","clue":"Který produkt nemohl být vyráběn, kvůli nedostatku víček?","row":13,"col":15,"len":5},
+  {"num":15,"word":"MOTIVACE","clue":"Co může lidem chybět, když všichni dostávají stejně bez ohledu na výkon?","row":14,"col":5,"len":8}
+ ],
+ "down": [
+  {"num":1,"word":"PROLETÁŘI","clue":"„_______ všech zemí, spojte se!“ – označení pro dělnickou třídu","row":0,"col":17,"len":9},
+  {"num":2,"word":"OSTRAVA","clue":"Město, kde si máme představit dělnický život v roce 1946","row":1,"col":2,"len":7},
+  {"num":4,"word":"DEVATENÁCTÉ","clue":"Století vydání Komunistického manifestu","row":2,"col":4,"len":11},
+  {"num":6,"word":"DĚLNÍCI","clue":"Lidé, kteří prodávají svou sílu a čas – podle textu nemají nic jiného","row":7,"col":0,"len":7},
+  {"num":7,"word":"BOHATÍ","clue":"Kdo utlačoval chudé podle Komunistického manifestu?","row":7,"col":13,"len":6},
+  {"num":9,"word":"NADĚJE","clue":"Jak nazvat pocit z lepší budoucnosti, který komunismus sliboval?","row":8,"col":16,"len":6},
+  {"num":10,"word":"SVOBODA","clue":"Co lidem nejvíce chybělo, když nemohli vyjadřovat vlastní názory?","row":8,"col":21,"len":7},
+  {"num":12,"word":"DVACÁTÉ","clue":"Století, kdy komunisté vyhráli volby v Československu","row":9,"col":7,"len":7}
+ ]
+};
+
+const gridEl = document.getElementById('grid');
+gridEl.style.gridTemplateColumns = `repeat(${PUZZLE.cols}, var(--cell-size, 30px))`;
+gridEl.style.gridTemplateRows = `repeat(${PUZZLE.rows}, var(--cell-size, 30px))`;
+
+// ---- Mobilní rozvržení (na výšku): rozpoznání režimu ------------------------
+// Na mobilu na výšku dostane mřížka vyhrazený horní pás displeje a otázka,
+// políčka pro zápis i tlačítka se přesunou do fixního spodního panelu.
+const mobileLayoutMQ = window.matchMedia('(max-width: 768px) and (orientation: portrait)');
+const boardAreaEl = document.getElementById('boardArea');
+const bottomPanelEl = document.getElementById('bottomPanel');
+let currentPanelH = 0;    // výška spodního panelu v px (drží se v --bottom-panel-h)
+let currentKbOffset = 0;  // o kolik je potřeba panel zvednout nad softwarovou klávesnici
+
+function isMobilePortrait(){
+  return mobileLayoutMQ.matches;
+}
+
+// Výškový rozpočet pro mřížku. Na mobilu jen horní pás nad spodním panelem;
+// kompenzace otevřené klávesnice se přičítá zpět, aby políčka při psaní
+// neměnila velikost.
+function boardHeightBudget(){
+  if(isMobilePortrait() && boardAreaEl){
+    const styles = getComputedStyle(boardAreaEl);
+    const paddingY = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+    const h = boardAreaEl.clientHeight - paddingY + currentKbOffset;
+    if(h > 0) return h;
+  }
+  return window.innerHeight * 0.78;
+}
+
+// Fit the whole board to the screen width so nothing gets cropped and no
+// horizontal scrollbar is needed, instead of relying on fixed breakpoints.
+function fitGridToViewport(){
+  const boardCard = document.querySelector('.board-card');
+  if(!boardCard) return;
+  const cardStyles = getComputedStyle(boardCard);
+  const cardPadX = parseFloat(cardStyles.paddingLeft) + parseFloat(cardStyles.paddingRight)
+    + 2*parseFloat(cardStyles.borderLeftWidth||0);
+  const cardPadTop = parseFloat(cardStyles.paddingTop) || 0;
+  const cardPadBottom = parseFloat(cardStyles.paddingBottom) || 0;
+  const gridBorder = 4; // 2px border on each side of #grid
+  const gapTotalCols = (PUZZLE.cols - 1) * 2; // 2px gap between cells
+  const gapTotalRows = (PUZZLE.rows - 1) * 2;
+
+  // The board bleeds edge-to-edge, so measure its actual rendered width
+  // directly rather than re-deriving it from the page's own padding.
+  const boardWidth = boardCard.getBoundingClientRect().width || window.innerWidth;
+  const availableWidth = boardWidth - cardPadX - gridBorder;
+  const sizeByWidth = Math.floor((availableWidth - gapTotalCols) / PUZZLE.cols);
+
+  // ...and against its viewport height budget, so the whole grid stays
+  // visible without needing to scroll. Na mobilu (portrait) je tím rozpočtem
+  // jen horní pás displeje nad spodním panelem – viz boardHeightBudget().
+  const heightBudget = boardHeightBudget();
+  const availableHeight = heightBudget - cardPadTop - cardPadBottom - gridBorder;
+  const sizeByHeight = Math.floor((availableHeight - gapTotalRows) / PUZZLE.rows);
+
+  let size = Math.min(sizeByWidth, sizeByHeight);
+  size = Math.max(11, Math.min(40, size));
+  document.documentElement.style.setProperty('--cell-size', size + 'px');
+}
+fitGridToViewport();
+window.addEventListener('resize', fitGridToViewport);
+window.addEventListener('orientationchange', fitGridToViewport);
+
+// build cell map
+const cellData = {}; // "r,c" -> {letter, inputEl, wordEls:Set}
+const inputs = {}; // "r,c" -> input element
+
+for(let r=0;r<PUZZLE.rows;r++){
+  for(let c=0;c<PUZZLE.cols;c++){
+    const key = `${r},${c}`;
+    const div = document.createElement('div');
+    if(PUZZLE.cells[key]){
+      div.className = 'cell';
+      div.dataset.r = r; div.dataset.c = c;
+      if(PUZZLE.numbers[key]){
+        const num = document.createElement('div');
+        num.className = 'num';
+        num.textContent = PUZZLE.numbers[key];
+        div.appendChild(num);
+      }
+      const input = document.createElement('input');
+      input.maxLength = 1;
+      input.autocomplete = 'off';
+      input.dataset.r = r; input.dataset.c = c;
+      div.appendChild(input);
+      inputs[key] = input;
+      cellData[key] = {letter: PUZZLE.cells[key], cellEl: div};
+    } else {
+      div.className = 'cell block';
+    }
+    gridEl.appendChild(div);
+  }
+}
+
+// build word -> cell list, and cell -> words map
+const words = []; // {dir, num, cells:[key...], clue, answer}
+function buildWordCells(item, dir){
+  const cells = [];
+  for(let i=0;i<item.len;i++){
+    const r = dir==='A' ? item.row : item.row+i;
+    const c = dir==='A' ? item.col+i : item.col;
+    cells.push(`${r},${c}`);
+  }
+  return cells;
+}
+PUZZLE.across.forEach(it=>{
+  words.push({dir:'A', num:it.num, cells: buildWordCells(it,'A'), clue: it.clue, answer: it.word});
+});
+PUZZLE.down.forEach(it=>{
+  words.push({dir:'D', num:it.num, cells: buildWordCells(it,'D'), clue: it.clue, answer: it.word});
+});
+
+const cellWords = {}; // key -> [wordIndex,...]
+words.forEach((w, idx)=>{
+  w.cells.forEach(key=>{
+    if(!cellWords[key]) cellWords[key] = [];
+    cellWords[key].push(idx);
+  });
+});
+
+let currentWordIdx = null;
+let currentCellKey = null;
+
+function clearHighlights(){
+  document.querySelectorAll('.cell.inword').forEach(el=>el.classList.remove('inword'));
+  document.querySelectorAll('.cell.active').forEach(el=>el.classList.remove('active'));
+}
+
+function highlightWord(idx){
+  clearHighlights();
+  const w = words[idx];
+  w.cells.forEach(key=>{
+    const cd = cellData[key];
+    if(cd) cd.cellEl.classList.add('inword');
+  });
+  updateClueBar(idx);
+  renderClueFields(idx);
+}
+
+function updateClueBar(idx){
+  const w = words[idx];
+  const bar = document.getElementById('clueBarText');
+  bar.innerHTML = `<b>${w.num}</b> ${w.clue}`;
+  updateArrowState(idx);
+}
+
+// pás políček pod otázkou — zrcadlí buňky aktuálního slova, mění se s délkou slova
+const clueFieldsEl = document.getElementById('clueFields');
+
+// ---- Mobilní rozvržení: spodní panel nad klávesnicí ------------------------
+const clueBarEl = document.getElementById('clueBar');
+const controlsEl = document.querySelector('.controls');
+const statusEl = document.getElementById('status');
+const cluePrevBtn = document.getElementById('cluePrevBtn');
+const clueNextBtn = document.getElementById('clueNextBtn');
+
+// Prvky, které na mobilu tvoří spodní panel (v tomto pořadí).
+const panelItems = [clueBarEl, clueFieldsEl, controlsEl, statusEl];
+// Původní místo v DOMu, kam se prvky vrací při přepnutí na desktop.
+const desktopSlots = new Map();
+
+function applyMobileLayout(){
+  if(!bottomPanelEl) return;
+  if(isMobilePortrait()){
+    panelItems.forEach(el=>{
+      if(!el) return;
+      if(!desktopSlots.has(el)) desktopSlots.set(el, {parent: el.parentNode, next: el.nextSibling});
+      if(el.parentNode !== bottomPanelEl) bottomPanelEl.appendChild(el);
+    });
+  } else {
+    // Zpět v opačném pořadí — každý prvek se vrací před svého původního
+    // následníka, který je v tu chvíli už také zpátky na svém místě.
+    panelItems.slice().reverse().forEach(el=>{
+      const slot = el ? desktopSlots.get(el) : null;
+      if(!slot || el.parentNode !== bottomPanelEl) return;
+      const ref = slot.next && slot.next.parentNode === slot.parent ? slot.next : null;
+      slot.parent.insertBefore(el, ref);
+    });
+  }
+  measureBottomPanel();
+}
+
+function measureBottomPanel(){
+  if(!bottomPanelEl) return;
+  const h = isMobilePortrait() ? Math.round(bottomPanelEl.getBoundingClientRect().height) : 0;
+  if(h === currentPanelH) return;
+  currentPanelH = h;
+  document.documentElement.style.setProperty('--bottom-panel-h', h + 'px');
+  scheduleRefit();
+}
+
+// Změna velikosti mřížky se odkládá do dalšího snímku, aby se neběhalo
+// uprostřed probíhajícího layoutu (např. z ResizeObserveru).
+let refitScheduled = false;
+function scheduleRefit(){
+  if(refitScheduled) return;
+  refitScheduled = true;
+  requestAnimationFrame(()=>{
+    refitScheduled = false;
+    fitGridToViewport();
+  });
+}
+
+// Softwarová klávesnice: zmenší se jen visualViewport (typicky iOS), proto
+// spodní panel zvedáme přesně nad jeho viditelnou část. Díky tomu drží panel
+// nad klávesnicí i nad lištou prohlížeče a mřížka pod něj nikdy neuteče.
+function updateKeyboardOffset(){
+  const vv = window.visualViewport;
+  let kb = 0;
+  if(isMobilePortrait() && vv){
+    const visibleBottom = vv.height + vv.offsetTop;   // spodní hrana viditelné části
+    kb = Math.round(Math.max(0, window.innerHeight - visibleBottom));
+    if(kb < 8) kb = 0;                                // drobné kmity ignorujeme
+  }
+  if(kb === currentKbOffset) return;
+  currentKbOffset = kb;
+  document.documentElement.style.setProperty('--kb-offset', kb + 'px');
+}
+
+// Na mobilu posune horní pás s mřížkou tak, aby aktivní slovo zůstalo vidět
+// nad spodním panelem (a případně i nad klávesnicí). Když je slovo celé
+// vidět, nic se neposouvá.
+function centerWordInBoardArea(){
+  if(!isMobilePortrait() || !boardAreaEl || currentWordIdx === null) return;
+  const w = words[currentWordIdx];
+  if(!w) return;
+  const areaRect = boardAreaEl.getBoundingClientRect();
+  const styles = getComputedStyle(boardAreaEl);
+  const viewTop = areaRect.top + (parseFloat(styles.paddingTop) || 0);
+  const viewBottom = areaRect.bottom - (parseFloat(styles.paddingBottom) || 0);
+  let wordTop = Infinity, wordBottom = -Infinity;
+  w.cells.forEach(key=>{
+    const cd = cellData[key];
+    if(!cd) return;
+    const r = cd.cellEl.getBoundingClientRect();
+    wordTop = Math.min(wordTop, r.top);
+    wordBottom = Math.max(wordBottom, r.bottom);
+  });
+  if(!isFinite(wordTop) || !isFinite(wordBottom)) return;
+  if(wordTop >= viewTop && wordBottom <= viewBottom) return;
+  const freeSpace = (viewBottom - viewTop) - (wordBottom - wordTop);
+  const shift = wordTop - (viewTop + Math.max(0, freeSpace) / 2);
+  const maxScroll = Math.max(0, boardAreaEl.scrollHeight - boardAreaEl.clientHeight);
+  boardAreaEl.scrollTop = Math.max(0, Math.min(maxScroll, Math.round(boardAreaEl.scrollTop + shift)));
+}
+
+// Přepnutí na předchozí/další otázku šipkami ve spodním panelu.
+// Nekonečné přepínání: po poslední otázce skočí zase na první a naopak.
+function stepWord(delta){
+  if(!words.length) return;
+  const base = currentWordIdx === null ? 0 : currentWordIdx + delta;
+  const idx = ((base % words.length) + words.length) % words.length;
+  const w = words[idx];
+  currentWordIdx = idx;
+  currentCellKey = w.cells[0];
+  highlightWord(idx);
+  const cd = cellData[w.cells[0]];
+  if(cd){
+    cd.cellEl.classList.add('active');
+    if(!isMobilePortrait()){
+      cd.cellEl.scrollIntoView({block:'center', inline:'center', behavior:'smooth'});
+    }
+  }
+  if(isMobilePortrait()){
+    clueFieldsEl.scrollLeft = 0;   // políčka nové otázky pěkně od začátku
+    centerWordInBoardArea();
+  }
+}
+
+function updateArrowState(idx = currentWordIdx){
+  if(!cluePrevBtn || !clueNextBtn) return;
+  // nekonečné přepínání — šipky se nikdy nedeaktivují
+  cluePrevBtn.disabled = false;
+  clueNextBtn.disabled = false;
+}
+
+function renderClueFields(idx){
+  clueFieldsEl.innerHTML = '';
+  const w = words[idx];
+  w.cells.forEach((key, pos)=>{
+    const real = inputs[key];
+    const cd = cellData[key];
+    const box = document.createElement('input');
+    box.type = 'text';
+    box.maxLength = 1;
+    box.autocomplete = 'off';
+    box.autocapitalize = 'characters';
+    box.spellcheck = false;
+    box.inputMode = 'text';
+    box.className = 'cf-box';
+    box.dataset.key = key;
+    box.dataset.pos = pos;
+    box.value = real ? real.value : '';
+    if(cd && cd.cellEl.classList.contains('correct')) box.classList.add('correct');
+    if(cd && cd.cellEl.classList.contains('incorrect')) box.classList.add('incorrect');
+
+    box.addEventListener('focus', ()=>{
+      currentCellKey = key;
+      document.querySelectorAll('.cell.active').forEach(el=>el.classList.remove('active'));
+      if(cd) cd.cellEl.classList.add('active');
+      // na mobilu držíme aktivní slovo nad spodním panelem / klávesnicí
+      if(isMobilePortrait()) centerWordInBoardArea();
+    });
+
+    box.addEventListener('input', ()=>{
+      let val = box.value.toUpperCase();
+      val = val.replace(/[^A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/g, '').slice(-1);
+      box.value = val;
+      box.classList.remove('correct','incorrect');
+      if(real){
+        real.value = val;
+        if(cd) cd.cellEl.classList.remove('correct','incorrect');
+      }
+      if(val){
+        const next = clueFieldsEl.querySelector(`[data-pos="${pos+1}"]`);
+        if(next) next.focus();
+      }
+    });
+
+    box.addEventListener('keydown', (e)=>{
+      if(e.key === 'Backspace' && !box.value){
+        const prev = clueFieldsEl.querySelector(`[data-pos="${pos-1}"]`);
+        if(prev){
+          prev.value = '';
+          prev.classList.remove('correct','incorrect');
+          const prevReal = inputs[prev.dataset.key];
+          if(prevReal) prevReal.value = '';
+          prev.focus();
+        }
+        e.preventDefault();
+      } else if(e.key === 'ArrowRight'){
+        const next = clueFieldsEl.querySelector(`[data-pos="${pos+1}"]`);
+        if(next){ next.focus(); e.preventDefault(); }
+      } else if(e.key === 'ArrowLeft'){
+        const prev = clueFieldsEl.querySelector(`[data-pos="${pos-1}"]`);
+        if(prev){ prev.focus(); e.preventDefault(); }
+      }
+    });
+
+    clueFieldsEl.appendChild(box);
+  });
+}
+
+// pokud se píše přímo do mřížky, projeví se to i v pásu pod otázkou
+function syncMirrorBox(key, val){
+  const box = clueFieldsEl.querySelector(`[data-key="${key}"]`);
+  if(box && document.activeElement !== box){
+    box.value = val;
+    box.classList.remove('correct','incorrect');
+  }
+}
+
+function selectWord(idx, cellKey){
+  currentWordIdx = idx;
+  currentCellKey = cellKey;
+  highlightWord(idx);
+  const cd = cellData[cellKey];
+  if(cd){
+    cd.cellEl.classList.add('active');
+    if(isMobilePortrait()){
+      // na mobilu posouváme jen horní pás s mřížkou, aby aktivní slovo
+      // nezůstalo skryté pod spodním panelem ani pod klávesnicí
+      centerWordInBoardArea();
+    } else {
+      cd.cellEl.scrollIntoView({block:'center', inline:'center', behavior:'smooth'});
+    }
+  }
+  const inp = inputs[cellKey];
+  if(inp) inp.focus({preventScroll:true});
+}
+
+function goToWord(idx){
+  const w = words[idx];
+  selectWord(idx, w.cells[0]);
+}
+
+function wordsAt(key){
+  return (cellWords[key]||[]).map(i=>words[i]);
+}
+
+function pickWordForCell(key, preferDir){
+  const idxs = cellWords[key] || [];
+  if(idxs.length===0) return null;
+  if(preferDir){
+    const found = idxs.find(i=>words[i].dir===preferDir);
+    if(found!==undefined) return found;
+  }
+  return idxs[0];
+}
+
+// click handling
+Object.keys(inputs).forEach(key=>{
+  const input = inputs[key];
+  input.addEventListener('focus', ()=>{
+    currentCellKey = key;
+    let preferDir = currentWordIdx!==null ? words[currentWordIdx].dir : null;
+    const idx = pickWordForCell(key, preferDir);
+    if(idx!==null){
+      currentWordIdx = idx;
+      highlightWord(idx);
+      cellData[key].cellEl.classList.add('active');
+    }
+  });
+
+  input.addEventListener('click', ()=>{
+    // toggle direction if clicking again on a cell belonging to two words
+    const idxs = cellWords[key]||[];
+    if(idxs.length>1 && currentWordIdx!==null && idxs.includes(currentWordIdx)){
+      const otherIdx = idxs.find(i=>i!==currentWordIdx);
+      if(otherIdx!==undefined){
+        currentWordIdx = otherIdx;
+        highlightWord(otherIdx);
+        cellData[key].cellEl.classList.add('active');
+      }
+    }
+  });
+
+  input.addEventListener('input', (e)=>{
+    let val = e.target.value.toUpperCase();
+    val = val.replace(/[^A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/g, '');
+    e.target.value = val.slice(-1);
+    cellData[key].cellEl.classList.remove('correct','incorrect');
+    syncMirrorBox(key, e.target.value);
+    if(val){
+      moveToNextCell(key);
+    }
+  });
+
+  input.addEventListener('keydown', (e)=>{
+    const r = parseInt(input.dataset.r), c = parseInt(input.dataset.c);
+    if(e.key === 'Backspace' && !input.value){
+      moveToPrevCell(key);
+      e.preventDefault();
+    } else if(e.key === 'ArrowRight'){
+      focusCell(r, c+1); e.preventDefault();
+    } else if(e.key === 'ArrowLeft'){
+      focusCell(r, c-1); e.preventDefault();
+    } else if(e.key === 'ArrowDown'){
+      focusCell(r+1, c); e.preventDefault();
+    } else if(e.key === 'ArrowUp'){
+      focusCell(r-1, c); e.preventDefault();
+    }
+  });
+});
+
+function focusCell(r,c){
+  const key = `${r},${c}`;
+  if(inputs[key]) inputs[key].focus();
+}
+
+function moveToNextCell(key){
+  if(currentWordIdx===null) return;
+  const w = words[currentWordIdx];
+  const pos = w.cells.indexOf(key);
+  if(pos>=0 && pos < w.cells.length-1){
+    const nextKey = w.cells[pos+1];
+    inputs[nextKey].focus();
+  }
+}
+function moveToPrevCell(key){
+  if(currentWordIdx===null) return;
+  const w = words[currentWordIdx];
+  const pos = w.cells.indexOf(key);
+  if(pos>0){
+    const prevKey = w.cells[pos-1];
+    inputs[prevKey].focus();
+    inputs[prevKey].value = '';
+    syncMirrorBox(prevKey, '');
+  }
+}
+
+// check / reveal / clear
+document.getElementById('checkBtn').addEventListener('click', ()=>{
+  let allFilled = true;
+  let allCorrect = true;
+  Object.keys(cellData).forEach(key=>{
+    const cd = cellData[key];
+    const inp = inputs[key];
+    cd.cellEl.classList.remove('correct','incorrect');
+    if(!inp.value){
+      allFilled = false;
+    } else if(inp.value === cd.letter){
+      cd.cellEl.classList.add('correct');
+    } else {
+      cd.cellEl.classList.add('incorrect');
+      allCorrect = false;
+    }
+  });
+  const status = document.getElementById('status');
+  if(!allFilled){
+    status.textContent = 'Křížovka ještě není celá vyplněná.';
+    status.className = '';
+  } else if(allCorrect){
+    status.textContent = '🎉 Výborně! Křížovka je vyřešená správně.';
+    status.className = 'win';
+  } else {
+    status.textContent = 'Některá políčka nejsou správně — zkus to znovu.';
+    status.className = '';
+  }
+  if(currentWordIdx!==null) renderClueFields(currentWordIdx);
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  Object.keys(inputs).forEach(key=>{
+    inputs[key].value = '';
+    cellData[key].cellEl.classList.remove('correct','incorrect');
+  });
+  document.getElementById('status').textContent = '';
+  document.getElementById('status').className = '';
+  if(currentWordIdx!==null) renderClueFields(currentWordIdx);
+});
+
+// select first word by default
+if(words.length){
+  selectWord(0, words[0].cells[0]);
+}
+
+// ---- Text k tématu (3 stránky podle nadpisů) ----
+const TEXT_PAGES = [
+  {
+    title: "Komunismus – jak ideologie ovlivnila celý svět",
+    html: `
+      <p>Představte si, že je rok 1946 a vy jste dělníci v ostravské textilce. Váš život je těžký, pracujete 12 hodin denně za nízkou mzdu, zatímco majitel továrny žije v luxusu. Někdo vám nabízí vizi společnosti, kde všichni budou mít stejné možnosti. Nová naděje...</p>
+      <p>V roce 1848 publikovali němečtí autoři Karl Marx a Friedrich Engels dokument, který se stal jedním z nejvlivnějších politických textů v dějinách – Komunistický manifest. Tento spis měl původně pouze 23 stran a obsahoval první ucelené myšlenky o komunismu.</p>
+    `
+  },
+  {
+    title: "Úryvek z Komunistického manifestu",
+    html: `
+      <p>Svobodní lidé a otroci, páni a nevolníci, bohatí a chudí – tyto skupiny spolu vždy soupeřily a jedna druhou utlačovala. I dnešní společnost, která vznikla po zániku středověku, stále trpí tímto rozdělením. Místo starých vrstev máme dnes dvě hlavní skupiny: bohaté vlastníky továren a dělníky.</p>
+      <p>Tito bohatí vlastníci rozhodují o výrobě a vydělávají na práci druhých. Dělníci často nemají nic jiného než svou sílu a čas, který prodávají. Komunisté chtějí tuto nerovnost zrušit.</p>
+      <p class="quote">„Proletáři všech zemí, spojte se!“</p>
+      <p>Tato slavná věta uzavírá celý Komunistický manifest. Znamená výzvu k tomu, aby se dělníci a pracující lidé z různých zemí spojili, protože mají společné zájmy.</p>
+    `
+  },
+  {
+    title: "Život v komunistickém státě",
+    html: `
+      <p>Představte si, že je rok 1970. Ve městě jsou dlouhé fronty na základní potraviny. Nemůžete svobodně cestovat do zahraničí a musíte si dávat pozor na to, co říkáte nahlas, protože vás někdo může udat. Nemáte možnost volby. Všechno řídí stát.</p>
+    `
+  }
+];
+
+let currentTextPage = 0;
+const textModal = document.getElementById('textModal');
+const textPageTitle = document.getElementById('textPageTitle');
+const textPageBody = document.getElementById('textPageBody');
+const textPageIndicator = document.getElementById('textPageIndicator');
+const textPrevBtn = document.getElementById('textPrevBtn');
+const textNextBtn = document.getElementById('textNextBtn');
+
+function renderTextPage(){
+  const p = TEXT_PAGES[currentTextPage];
+  textPageTitle.textContent = p.title;
+  textPageBody.innerHTML = p.html;
+  textPageIndicator.textContent = `${currentTextPage+1} / ${TEXT_PAGES.length}`;
+  textPrevBtn.disabled = currentTextPage === 0;
+  textNextBtn.disabled = currentTextPage === TEXT_PAGES.length - 1;
+  textPageBody.scrollTop = 0;
+}
+
+function openTextModal(){
+  textModal.classList.remove('hidden');
+  renderTextPage();
+}
+function closeTextModal(){
+  textModal.classList.add('hidden');
+  if(location.hash === '#text'){
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+}
+
+document.getElementById('qrCorner').addEventListener('click', openTextModal);
+document.getElementById('closeTextModal').addEventListener('click', closeTextModal);
+textModal.addEventListener('click', (e)=>{ if(e.target === textModal) closeTextModal(); });
+textPrevBtn.addEventListener('click', ()=>{
+  if(currentTextPage > 0){ currentTextPage--; renderTextPage(); }
+});
+textNextBtn.addEventListener('click', ()=>{
+  if(currentTextPage < TEXT_PAGES.length - 1){ currentTextPage++; renderTextPage(); }
+});
+document.addEventListener('keydown', (e)=>{
+  if(textModal.classList.contains('hidden')) return;
+  if(e.key === 'Escape') closeTextModal();
+});
+
+// QR code linking to this same page's text section (works once hosted at a real URL)
+try{
+  const qrUrl = location.origin + location.pathname + '#text';
+  new QRCode(document.getElementById('qrcode'), {
+    text: qrUrl,
+    width: 64,
+    height: 64,
+    colorDark: '#1c1620',
+    colorLight: '#f4efe4',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+  new QRCode(document.getElementById('qrCornerMini'), {
+    text: qrUrl,
+    width: 46,
+    height: 46,
+    colorDark: '#1c1620',
+    colorLight: '#f4efe4',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}catch(err){
+  document.getElementById('qrcode').textContent = 'QR se nepodařilo vytvořit';
+}
+
+// auto-open the text if page is opened via the #text link (e.g. from the QR code)
+if(location.hash === '#text'){
+  openTextModal();
+}
+
+// ---- start mobilního rozvržení (spodní panel + držení nad klávesnicí) ----
+applyMobileLayout();
+updateKeyboardOffset();
+updateArrowState();
+fitGridToViewport();
+
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', updateKeyboardOffset);
+  window.visualViewport.addEventListener('scroll', updateKeyboardOffset);
+}
+if(window.ResizeObserver && bottomPanelEl){
+  // panel mění výšku podle délky otázky i podle hlášky po kontrole
+  new ResizeObserver(()=>measureBottomPanel()).observe(bottomPanelEl);
+}
+function onMobileLayoutChange(){
+  applyMobileLayout();
+  updateKeyboardOffset();
+  scheduleRefit();
+  requestAnimationFrame(()=>centerWordInBoardArea());
+}
+if(typeof mobileLayoutMQ.addEventListener === 'function'){
+  mobileLayoutMQ.addEventListener('change', onMobileLayoutChange);
+} else if(typeof mobileLayoutMQ.addListener === 'function'){
+  mobileLayoutMQ.addListener(onMobileLayoutChange); // starší Safari
+}
+cluePrevBtn.addEventListener('click', ()=>stepWord(-1));
+clueNextBtn.addEventListener('click', ()=>stepWord(1));
+</script>
+</body>
+</html>
